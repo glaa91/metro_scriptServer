@@ -3,10 +3,11 @@ import psycopg2
 import sys
 import os
 import subprocess
-from loggerInit import *
-#import lxml
+#from loggerInit import *
 import html
 import urllib.request, urllib.error
+#from scriptPsql import *
+from scriptFunciones import *
 import datetime
 from datetime import datetime
 import colorama
@@ -27,12 +28,22 @@ init()
 #def main():
 from colorama import Fore, Back, Style
 #logging.basicConfig(filename='scriptRuning.log', level=logging.DEBUG, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+#INICIO LA FUNCION LOGGIN PARA QUE EL LOG ME TOME ARCHIVOS Y CONSOLA
 init_logger()
 
 dateTime_d = datetime.now()
 dateTime_s = dateTime_d.strftime('%y-%m-%d_%H:%M:%S')
 logging.info(Fore.RED + Back.BLACK + '**********************************************************************************************' + Fore.WHITE)
-logging.info(Fore.WHITE + 'INICIANDO SCRIPT... 		ver. 2016.11.23' + Fore.WHITE)
+logging.info(Fore.WHITE + 'INICIANDO SCRIPT... 		ver. 2016.11.25' + Fore.WHITE)
+
+#
+#	SE CORRIGIO QUE TRATE DE CERRAR conn.close() SI NO SE PUEDO COENCTAR
+#	SE CREO UNA FUNCION PARA ESCRIBIR EN LA BASE DE DATOS. boolean update_psql(connector, nombreTabla_SET, dato_SET, nombreTabla_WHERE, dato_WHERE)
+#	SE BORRO EL MENSAJE DE INFO CON NULL DEL FINAL DE CADA VARIABLE -- NO TENIA NINGUN SENTIDO MOSTRAR ESO AHI
+#	SE AGREGO FUNCION PARA BUSCAR LOS STRING EN EL HTML DE LA PAGINA DEL MICRO, Y EVITAR REPETIR LO MISMO MUCHAS VECES
+#	SE CREO UN SOLO .py CON TODAS LAS FUCNIONES AHI DENTRO
+#	SE MODIFICO LA FORMA DE MOSTRAR LOS UPDATE 1 - 0. SOBRE LA ACTUALIZACION DE LA TABLA, PARA SIMPLIFICAR EL CODIGO.
+#
 
 #define String conection
 connection_s = "host='localhost' dbname='scp' user='postgres' password='postgres'"
@@ -43,7 +54,7 @@ logging.debug(Fore.CYAN + 'Connecting to database -> {conector}'.format(conector
 try:
 	conn = psycopg2.connect(connection_s)
 except psycopg2.OperationalError as e:
-	logging.critical(Fore.RED + "ERROR DE CONEXION... " + str(e) + Fore.WHITE)
+	logging.critical(Fore.RED + "ERROR DE CONEXION A LA BASE DE DATOS... " + str(e) + Fore.WHITE)
 else:
 	conn.set_isolation_level(0)
 	cursor = conn.cursor()
@@ -128,7 +139,7 @@ else:
 				#		SI ES DISTINTO CARGO EL NUEVO.
 				logging.info(Fore.WHITE + Back.BLACK + "HTTP: OK... CODE:" + str(f.getcode()) + Fore.WHITE)
 				pageString_s = str(f.read())
-				#ASI VOY A BUSCAR LOS INCIOS DE LOS MESAES A SACAR DE LA PAGINA
+				#ASI VOY A BUSCAR LOS INCIOS DE LOS MENSAJES A SACAR DE LA PAGINA
 				startTemp_s = "Temperatura ="
 				startFuente5v_s = "Fuente 5 volt = "
 				startFuente24v_s = "Fuente 24 Volt Semaforos = "
@@ -143,59 +154,32 @@ else:
 				endMensaje_s = "</pre>"
 				#LEO TODO EL CONTENIDO
 				logging.debug(Fore.CYAN + "ESTE ES EL CONTENIDO QUE ENCONTRE EN EL HTML: " + pageString_s + Fore.WHITE)
-
 				#LEO TEMPERATURA
-				startTemp = pageString_s.find(startTemp_s)+len(startTemp_s)
-				endTemp = pageString_s.find(endTemp_s,startTemp)
-				htmlTemp_s = pageString_s[startTemp:endTemp]
+				htmlTemp_s = find_string(pageString_s, startTemp_s, endTemp_s)
 				logging.debug(Fore.CYAN + "HTML TEMP:" + htmlTemp_s + Fore.WHITE)
-
 				#LEO FUENTE 5v
-				startFuente5v = pageString_s.find(startFuente5v_s)+len(startFuente5v_s)
-				endFuente5v = pageString_s.find(end_s,startFuente5v)
-				htmlFuente5v_s = pageString_s[startFuente5v:endFuente5v]
+				htmlFuente5v_s = find_string(pageString_s, startFuente5v_s, end_s)
 				logging.debug(Fore.CYAN + "HTML FUENTE 5v:" + htmlFuente5v_s + Fore.WHITE)
-
 				#LEO FUENTE 24v
-				startFuente24v = pageString_s.find(startFuente24v_s)+len(startFuente24v_s)
-				endFuente24v = pageString_s.find(end_s,startFuente24v)
-				htmlFuente24v_s = pageString_s[startFuente24v:endFuente24v]
+				htmlFuente24v_s = find_string(pageString_s, startFuente24v_s, end_s)
 				logging.debug(Fore.CYAN + "HTML FUENTE 24v:" + htmlFuente24v_s + Fore.WHITE)
-
 				#LEO FUENTE PPIC
-				startFuentePpic = pageString_s.find(startFuentePpic_s)+len(startFuentePpic_s)
-				endFuentePpic = pageString_s.find(end_s,startFuentePpic)
-				htmlFuentePpic_s = pageString_s[startFuentePpic:endFuentePpic]
+				htmlFuentePpic_s = find_string(pageString_s, startFuentePpic_s, end_s)
 				logging.debug(Fore.CYAN + "HTML FUENTE PPIC:" + htmlFuentePpic_s + Fore.WHITE)
-
 				#LEO FUENTE 5PIC
-				startFuente5pic = pageString_s.find(startFuente5pic_s)+len(startFuente5pic_s)
-				endFuente5pic = pageString_s.find(end_s,startFuente5pic)
-				htmlFuente5pic_s = pageString_s[startFuente5pic:endFuente5pic]
+				htmlFuente5pic_s = find_string(pageString_s, startFuente5pic_s, end_s)
 				logging.debug(Fore.CYAN + "HTML FUENTE 5PIC:" + htmlFuente5pic_s + Fore.WHITE)
-
 				#LEO CORRIENTE
-				startCorriente = pageString_s.find(startCorriente_s)+len(startCorriente_s)
-				endCorriente = pageString_s.find(end_s,startCorriente)
-				htmlCorriente_s = pageString_s[startCorriente:endCorriente]
+				htmlCorriente_s = find_string(pageString_s, startCorriente_s, end_s)
 				logging.debug(Fore.CYAN + "HTML CORRIENTE:" + htmlCorriente_s + Fore.WHITE)
-
 				#LEO PILA
-				startPila = pageString_s.find(startPila_s)+len(startPila_s)
-				endPila = pageString_s.find(end_s,startPila)
-				htmlPila_s = pageString_s[startPila:endPila]
+				htmlPila_s = find_string(pageString_s, startPila_s, end_s)
 				logging.debug(Fore.CYAN + "HTML PILA:" + htmlPila_s + Fore.WHITE)
-
 				#LEO MAC -- IMPORTANTE!
-				startMac = pageString_s.find(startMac_s)+len(startMac_s)
-				endMac = pageString_s.find(end_s,startMac)
-				htmlMac_s = pageString_s[startMac:endMac]
+				htmlMac_s = find_string(pageString_s, startMac_s, end_s)
 				logging.debug(Fore.CYAN + "HTML MAC:" + htmlMac_s + Fore.WHITE)
-
 				#LEO MENSAJE
-				startMensaje = pageString_s.find(startMensaje_s)+len(startMensaje_s)
-				endMensaje = pageString_s.find(endMensaje_s,startMensaje)
-				htmlMensaje_s = pageString_s[startMensaje:endMensaje]
+				htmlMensaje_s = find_string(pageString_s, startMensaje_s, endMensaje_s)
 				logging.debug(Fore.CYAN + "HTML MENSAJE:" + htmlMensaje_s + Fore.WHITE)
 
 				#AHORA QUE TENGO LA MAC, PRIMERO DEBO COMPARARLA CON LA QUE ENCONTRE EN LA TABLA
@@ -203,88 +187,41 @@ else:
 					#LA MAC DE LA TABLA ESTACION ES IGUAL A LA DE LA PAGINA => EL CARTEL QUE ESTA EN LA ESTACION ES EL QUE DICE LA BASE DE DATOS!
 					logging.debug(Fore.CYAN + "htmlMac==dbEstacionesMac => LA TABLA ESTACIONES ESTA ACTUALIZADA!" + Fore.WHITE)
 					#DATETIME
-					cursor4.execute("""UPDATE carteles SET dateTime = '{dateTime}' WHERE numeroSerie = '{numeroSerie}'""".format(dateTime=dateTime_s,numeroSerie=dbEstacionesMac_s))
-					update_rows4 = cursor4.rowcount
-					if update_rows4==1:
-						logging.info(Fore.WHITE + "UPDATE OK -- " +str(update_rows4) + "-dateTime" + Fore.WHITE)
-						logging.debug(Fore.CYAN + Back.BLACK + "ACTUALIZE BIEN dateTime A LA TABLA CARTELES" + Fore.WHITE)
-					else:
-						logging.error(Fore.MAGENTA +Back.CYAN + "UPDATE ERROR -- " +str(update_rows4) + "-dateTime" + Fore.WHITE)
-						logging.debug(Fore.CYAN + Back.BLACK + "NO ACTUALIZE BIEN dateTime A CARTELES" + Fore.WHITE)
-
+					estado_b = update_psql(conn, "carteles", "dateTime", dateTime_s, "numeroSerie", dbEstacionesMac_s)
+					logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - dateTime" + Fore.WHITE)
+					logging.debug(Fore.CYAN + Back.BLACK + "dateTime ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
 					#PILA
-					cursor4.execute("""UPDATE carteles SET pila = '{pila}' WHERE numeroSerie = '{numeroSerie}'""".format(pila=htmlPila_s,numeroSerie=dbEstacionesMac_s))
-					update_rows4 = cursor4.rowcount
-					if update_rows4==1:
-						logging.info(Fore.WHITE + "UPDATE OK -- " +str(update_rows4) + "-pila" + Fore.WHITE)
-						logging.debug(Fore.CYAN + Back.BLACK + "ACTUALIZE BIEN pila A LA TABLA CARTELES" + Fore.WHITE)
-					else:
-						logging.error(Fore.MAGENTA +Back.CYAN + "UPDATE ERROR -- " +str(update_rows4) + "-pila" + Fore.WHITE)
-						logging.debug(Fore.CYAN + Back.BLACK + "NO ACTUALIZE BIEN pila A CARTELES" + Fore.WHITE)					
+					estado_b = update_psql(conn, "carteles", "pila", htmlPila_s, "numeroSerie", dbEstacionesMac_s)
+					logging.info(Fore.WHITE + "UPDATE OK (1)" + "-pila" + Fore.WHITE)
+					logging.debug(Fore.CYAN + Back.BLACK + "ACTUALIZE BIEN pila A LA TABLA CARTELES" + Fore.WHITE)
 					#TEMPERATURA
-					cursor4.execute("""UPDATE carteles SET temp = '{temperatura}' WHERE numeroSerie = '{numeroSerie}'""".format(temperatura=htmlTemp_s,numeroSerie=dbEstacionesMac_s))
-					update_rows4 = cursor4.rowcount
-					if update_rows4==1:
-						logging.info(Fore.WHITE + "UPDATE OK -- " +str(update_rows4) + "-temperatura" + Fore.WHITE)
-						logging.debug(Fore.CYAN + Back.BLACK + "ACTUALIZE BIEN temperatura A LA TABLA CARTELES" + Fore.WHITE)
-					else:
-						logging.error(Fore.MAGENTA +Back.CYAN + "UPDATE ERROR -- " +str(update_rows4) + "-temperatura" + Fore.WHITE)
-						logging.debug(Fore.CYAN + Back.BLACK + "NO ACTUALIZE BIEN temperatura A CARTELES" + Fore.WHITE)
+					estado_b = update_psql(conn, "carteles", "temp", htmlTemp_s, "numeroSerie", dbEstacionesMac_s)
+					logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - temperatura" + Fore.WHITE)
+					logging.debug(Fore.CYAN + Back.BLACK + "temperatura ACTUALIZADA? -> " + str(estado_b) + Fore.WHITE)
 					#CORRIENTE
-					cursor4.execute("""UPDATE carteles SET corriente = '{corriente}' WHERE numeroSerie = '{numeroSerie}'""".format(corriente=htmlCorriente_s,numeroSerie=dbEstacionesMac_s))
-					update_rows4 = cursor4.rowcount
-					if update_rows4==1:
-						logging.info(Fore.WHITE + "UPDATE OK -- " +str(update_rows4) + "-corriente" + Fore.WHITE)
-						logging.debug(Fore.CYAN + Back.BLACK + "ACTUALIZE BIEN corriente A LA TABLA CARTELES" + Fore.WHITE)
-					else:
-						logging.error(Fore.MAGENTA +Back.CYAN + "UPDATE ERROR -- " +str(update_rows4) + "-corriente" + Fore.WHITE)
-						logging.debug(Fore.CYAN + Back.BLACK + "NO ACTUALIZE BIEN corriente A CARTELES" + Fore.WHITE)
+					estado_b = update_psql(conn, "carteles", "corriente", htmlCorriente_s, "numeroSerie", dbEstacionesMac_s)
+					logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - corriente" + Fore.WHITE)
+					logging.debug(Fore.CYAN + Back.BLACK + "corriente ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
 					#FUENTE5V
-					cursor4.execute("""UPDATE carteles SET fuente5v = '{fuente5v}' WHERE numeroSerie = '{numeroSerie}'""".format(fuente5v=htmlFuente5v_s,numeroSerie=dbEstacionesMac_s))
-					update_rows4 = cursor4.rowcount
-					if update_rows4==1:
-						logging.info(Fore.WHITE + "UPDATE OK -- " +str(update_rows4) + "-fuente5v" + Fore.WHITE)
-						logging.debug(Fore.CYAN + Back.BLACK + "ACTUALIZE BIEN fuente5v A LA TABLA CARTELES" + Fore.WHITE)
-					else:
-						logging.error(Fore.MAGENTA +Back.CYAN + "UPDATE ERROR -- " +str(update_rows4) + "-fuente5v" + Fore.WHITE)
-						logging.debug(Fore.CYAN + Back.BLACK + "NO ACTUALIZE BIEN fuente5v A CARTELES" + Fore.WHITE)
+					estado_b = update_psql(conn, "carteles", "fuente5v", htmlFuente5v_s, "numeroSerie", dbEstacionesMac_s)
+					logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - fuente5v" + Fore.WHITE)
+					logging.debug(Fore.CYAN + Back.BLACK + "fuente5v ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
 					#fuente24V
-					cursor4.execute("""UPDATE carteles SET fuente24v = '{fuente24v}' WHERE numeroSerie = '{numeroSerie}'""".format(fuente24v=htmlFuente24v_s,numeroSerie=dbEstacionesMac_s))
-					update_rows4 = cursor4.rowcount
-					if update_rows4==1:
-						logging.info(Fore.WHITE + "UPDATE OK -- " +str(update_rows4) + "-fuente24v" + Fore.WHITE)
-						logging.debug(Fore.CYAN + Back.BLACK + "ACTUALIZE BIEN fuente24v A LA TABLA CARTELES" + Fore.WHITE)
-					else:
-						logging.error(Fore.MAGENTA +Back.CYAN + "UPDATE ERROR -- " +str(update_rows4) + "-fuente24v" + Fore.WHITE)
-						logging.debug(Fore.CYAN + Back.BLACK + "NO ACTUALIZE BIEN fuente24v A CARTELES" + Fore.WHITE)
+					estado_b = update_psql(conn, "carteles", "fuente24v", htmlFuente24v_s, "numeroSerie", dbEstacionesMac_s)
+					logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + "-fuente24v" + Fore.WHITE)
+					logging.debug(Fore.CYAN + Back.BLACK + "fuente24v ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
 					#FUENTEPPIC
-					cursor4.execute("""UPDATE carteles SET fuentePpic = '{fuentePpic}' WHERE numeroSerie = '{numeroSerie}'""".format(fuentePpic=htmlFuentePpic_s,numeroSerie=dbEstacionesMac_s))
-					update_rows4 = cursor4.rowcount
-					if update_rows4==1:
-						logging.info(Fore.WHITE + "UPDATE OK -- " +str(update_rows4) + "-fuenteppic" + Fore.WHITE)
-						logging.debug(Fore.CYAN + Back.BLACK + "ACTUALIZE BIEN fuenteppic A LA TABLA CARTELES" + Fore.WHITE)
-					else:
-						logging.error(Fore.MAGENTA +Back.CYAN + "UPDATE ERROR -- " +str(update_rows4) + "-fuenteppic" + Fore.WHITE)
-						logging.debug(Fore.CYAN + Back.BLACK + "NO ACTUALIZE BIEN fuenteppic A CARTELES" + Fore.WHITE)
+					estado_b = update_psql(conn, "carteles", "fuentePpic", htmlFuentePpic_s, "numeroSerie", dbEstacionesMac_s)
+					logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + "-fuenteppic" + Fore.WHITE)
+					logging.debug(Fore.CYAN + Back.BLACK + "fuenteppic ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
 					#FUENTE5PIC
-					cursor4.execute("""UPDATE carteles SET fuente5pic = '{fuente5pic}' WHERE numeroSerie = '{numeroSerie}'""".format(fuente5pic=htmlFuente5pic_s,numeroSerie=dbEstacionesMac_s))
-					update_rows4 = cursor4.rowcount
-					if update_rows4==1:
-						logging.info(Fore.WHITE + "UPDATE OK -- " +str(update_rows4) + "-fuente5pic" + Fore.WHITE)
-						logging.debug(Fore.CYAN + Back.BLACK + "ACTUALIZE BIEN fuente5pic A LA TABLA CARTELES" + Fore.WHITE)
-					else:
-						logging.error(Fore.MAGENTA +Back.CYAN + "UPDATE ERROR -- " +str(update_rows4) + "-fuente5pic" + Fore.WHITE)
-						logging.debug(Fore.CYAN + Back.BLACK + "NO ACTUALIZE BIEN fuente5pic A CARTELES" + Fore.WHITE)
+					estado_b = update_psql(conn, "carteles", "fuente5pic", htmlFuente5pic_s, "numeroSerie", dbEstacionesMac_s)
+					logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - fuente5pic" + Fore.WHITE)
+					logging.debug(Fore.CYAN + Back.BLACK + "fuente5pic ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
 					#MENSAJE
-					cursor4.execute("""UPDATE carteles SET mensaje = '{msj}' WHERE numeroSerie = '{numeroSerie}'""".format(msj=htmlMensaje_s,numeroSerie=dbEstacionesMac_s))
-					update_rows4 = cursor4.rowcount
-					if update_rows4==1:
-						logging.info(Fore.WHITE + "UPDATE OK -- " +str(update_rows4) + "-mensaje" + Fore.WHITE)
-						logging.debug(Fore.CYAN + Back.BLACK + "ACTUALIZE BIEN mensaje A LA TABLA CARTELES" + Fore.WHITE)
-					else:
-						logging.error(Fore.MAGENTA +Back.CYAN + "UPDATE ERROR -- " +str(update_rows4) + "-mensaje" + Fore.WHITE)
-						logging.debug(Fore.CYAN + Back.BLACK + "NO ACTUALIZE BIEN mensaje A CARTELES" + Fore.WHITE)
-					conn.commit()
+					estado_b = update_psql(conn, "carteles", "mensaje", htmlMensaje_s, "numeroSerie", dbEstacionesMac_s)
+					logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - mensaje" + Fore.WHITE)
+					logging.debug(Fore.CYAN + Back.BLACK + "mensaje ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
 				else:
 					#LA MAC DE LA TABLA ESTACIONES ES DISTINTA A LA DE LA PAGINA
 					#BUSCAR EN LA TABLA CARTELES LA htmlMac
@@ -293,123 +230,68 @@ else:
 					cursor4.execute("""SELECT * FROM v_carteles;""")
 					rows4 = cursor4.fetchall();
 					dbCartelesMac_s = 'null'
+					dbCartelesMac_b = False		#VARIABLE PARA SABER SI LA MAC YA ESTA EN LA LISTA DE carteles
 					for row4 in rows4:
 						dbCartelesMac_s = str(row4[0])
 						#logging.debug(Fore.CYAN + "ESTO ENCONTRE dbEstacionesMac => " + dbCartelesMac_s + Fore.WHITE)
 						if dbCartelesMac_s==htmlMac_s:
-							logging.info(Fore.WHITE + "MAC ECNOTRADA: " + dbCartelesMac_s + Fore.WHITE)
+							dbCartelesMac_b = True
+							logging.info(Fore.WHITE + "MAC ENCONTRADA: " + dbCartelesMac_s + Fore.WHITE)
 							#ENCONTRE LA MAC DEL HTML EN LA TABLA DE CARTELES
 							#AHORA TENGO QUE ACTUALIZAR LA TABLA DE ESTACIONES CON LA NUEVA MAC!
 							logging.debug(Fore.CYAN + "ENCONTRE LA MAC EN LA TABLA CARTELES!" + dbCartelesMac_s + Fore.WHITE)
-							cursor4.execute("""UPDATE estaciones SET numeroSerie = '{numeroSerie}' WHERE numeroCartel = '{cartel}'""".format(numeroSerie=dbCartelesMac_s,cartel=dbEstacionesNumeroCartel_s))
-							update_rows4 = cursor4.rowcount
-							#imprimo el resultado de la actualizacion
-							if update_rows4==1:
-								logging.info(Fore.WHITE + "UPDATE OK -- " +str(update_rows4) + "-numeroSerie" + Fore.WHITE)
-								logging.debug(Fore.CYAN + Back.BLACK + "ACTUALIZE BIEN LA NUEVA Mac A LA TABLA ESTACIONES" + Fore.WHITE)
-							else:
-								logging.error(Fore.MAGENTA +Back.CYAN + "UPDATE ERROR -- " +str(update_rows4) + "-numeroSerie" + Fore.WHITE)
-								logging.debug(Fore.CYAN + Back.BLACK + "NO ACTUALIZE BIEN LA NUEVA Mac A ESTACIONES" + Fore.WHITE)
+							estado_b = update_psql(conn, "estaciones", "numeroSerie", dbCartelesMac_s, "numeroCartel", dbEstacionesNumeroCartel_s)
+							logging.info(Fore.WHITE + "UPDATE " +str(estado_b) + " - numeroSerie" + Fore.WHITE)
+							logging.debug(Fore.CYAN + Back.BLACK + "Mac ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
 							#TENGO QUE ACTUALIZAR TODOS LOS PARAMETROS DEL CARTEL AHORA EN LA TABLA CARTELES
 							#DATETIME
-							cursor4.execute("""UPDATE carteles SET dateTime = '{dateTime}' WHERE numeroSerie = '{numeroSerie}'""".format(dateTime=dateTime_s,numeroSerie=dbCartelesMac_s))
-							update_rows4 = cursor4.rowcount
-							if update_rows4==1:
-								logging.info(Fore.WHITE + "UPDATE OK -- " +str(update_rows4) + "-dateTime" + Fore.WHITE)
-								logging.debug(Fore.CYAN + Back.BLACK + "ACTUALIZE BIEN dateTime A LA TABLA CARTELES" + Fore.WHITE)
-							else:
-								logging.error(Fore.MAGENTA +Back.CYAN + "UPDATE ERROR -- " +str(update_rows4) + "-dateTime" + Fore.WHITE)
-								logging.debug(Fore.CYAN + Back.BLACK + "NO ACTUALIZE BIEN dateTime A CARTELES" + Fore.WHITE)
+							estado_b = update_psql(conn, "carteles", "dateTime", dateTime_s, "numeroSerie", dbCartelesMac_s)
+							logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - dateTime" + Fore.WHITE)
+							logging.debug(Fore.CYAN + Back.BLACK + "dateTime ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
 							#PILA
-							cursor4.execute("""UPDATE carteles SET pila = '{pila}' WHERE numeroSerie = '{numeroSerie}'""".format(pila=htmlPila_s,numeroSerie=dbCartelesMac_s))
-							update_rows4 = cursor4.rowcount
-							if update_rows4==1:
-								logging.info(Fore.WHITE + "UPDATE OK -- " +str(update_rows4) + "-pila" + Fore.WHITE)
-								logging.debug(Fore.CYAN + Back.BLACK + "ACTUALIZE BIEN pila A LA TABLA CARTELES" + Fore.WHITE)
-							else:
-								logging.error(Fore.MAGENTA +Back.CYAN + "UPDATE ERROR -- " +str(update_rows4) + "-pila" + Fore.WHITE)
-								logging.debug(Fore.CYAN + Back.BLACK + "NO ACTUALIZE BIEN pila A CARTELES" + Fore.WHITE)
+							estado_b = update_psql(conn, "carteles", "pila", htmlPila_s, "numeroSerie", dbCartelesMac_s)
+							logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - pila" + Fore.WHITE)
+							logging.debug(Fore.CYAN + Back.BLACK + "pila ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
 							#TEMPERATURA
-							cursor4.execute("""UPDATE carteles SET temp = '{temperatura}' WHERE numeroSerie = '{numeroSerie}'""".format(temperatura=htmlTemp_s,numeroSerie=dbCartelesMac_s))
-							update_rows4 = cursor4.rowcount
-							if update_rows4==1:
-								logging.info(Fore.WHITE + "UPDATE OK -- " +str(update_rows4) + "-temperatura" + Fore.WHITE)
-								logging.debug(Fore.CYAN + Back.BLACK + "ACTUALIZE BIEN temperatura A LA TABLA CARTELES" + Fore.WHITE)
-							else:
-								logging.error(Fore.MAGENTA +Back.CYAN + "UPDATE ERROR -- " +str(update_rows4) + "-temperatura" + Fore.WHITE)
-								logging.debug(Fore.CYAN + Back.BLACK + "NO ACTUALIZE BIEN temperatura A CARTELES" + Fore.WHITE)
+							estado_b = update_psql(conn, "carteles", "temp", htmlTemp_s, "numeroSerie", dbCartelesMac_s)
+							logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - temperatura" + Fore.WHITE)
+							logging.debug(Fore.CYAN + Back.BLACK + "temperatura ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
 							#CORRIENTE
-							cursor4.execute("""UPDATE carteles SET corriente = '{corriente}' WHERE numeroSerie = '{numeroSerie}'""".format(corriente=htmlCorriente_s,numeroSerie=dbCartelesMac_s))
-							update_rows4 = cursor4.rowcount
-							if update_rows4==1:
-								logging.info(Fore.WHITE + "UPDATE OK -- " +str(update_rows4) + "-corriente" + Fore.WHITE)
-								logging.debug(Fore.CYAN + Back.BLACK + "ACTUALIZE BIEN corriente A LA TABLA CARTELES" + Fore.WHITE)
-							else:
-								logging.error(Fore.MAGENTA +Back.CYAN + "UPDATE ERROR -- " +str(update_rows4) + "-corriente" + Fore.WHITE)
-								logging.debug(Fore.CYAN + Back.BLACK + "NO ACTUALIZE BIEN corriente A CARTELES" + Fore.WHITE)
+							estado_b = update_psql(conn, "carteles", "corriente", htmlCorriente_s, "numeroSerie", dbCartelesMac_s)
+							logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - corriente" + Fore.WHITE)
+							logging.debug(Fore.CYAN + Back.BLACK + "corriente ACTUALIZADA? -> " + str(estado_b) + Fore.WHITE)
 							#FUENTE5V
-							cursor4.execute("""UPDATE carteles SET fuente5v = '{fuente5v}' WHERE numeroSerie = '{numeroSerie}'""".format(fuente5v=htmlFuente5v_s,numeroSerie=dbCartelesMac_s))
-							update_rows4 = cursor4.rowcount
-							if update_rows4==1:
-								logging.info(Fore.WHITE + "UPDATE OK -- " +str(update_rows4) + "-fuente5v" + Fore.WHITE)
-								logging.debug(Fore.CYAN + Back.BLACK + "ACTUALIZE BIEN fuente5v A LA TABLA CARTELES" + Fore.WHITE)
-							else:
-								logging.error(Fore.MAGENTA +Back.CYAN + "UPDATE ERROR -- " +str(update_rows4) + "-fuente5v" + Fore.WHITE)
-								logging.debug(Fore.CYAN + Back.BLACK + "NO ACTUALIZE BIEN fuente5v A CARTELES" + Fore.WHITE)
+							estado_b = update_psql(conn, "carteles", "fuente5v", htmlFuente5v_s, "numeroSerie", dbCartelesMac_s)
+							logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - fuente5v" + Fore.WHITE)
+							logging.debug(Fore.CYAN + Back.BLACK + "fuente5v ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
 							#fuente24V
-							cursor4.execute("""UPDATE carteles SET fuente24v = '{fuente24v}' WHERE numeroSerie = '{numeroSerie}'""".format(fuente24v=htmlFuente24v_s,numeroSerie=dbCartelesMac_s))
-							update_rows4 = cursor4.rowcount
-							if update_rows4==1:
-								logging.info(Fore.WHITE + "UPDATE OK -- " +str(update_rows4) + "-fuente24v" + Fore.WHITE)
-								logging.debug(Fore.CYAN + Back.BLACK + "ACTUALIZE BIEN fuente24v A LA TABLA CARTELES" + Fore.WHITE)
-							else:
-								logging.error(Fore.MAGENTA +Back.CYAN + "UPDATE ERROR -- " +str(update_rows4) + "-fuente24v" + Fore.WHITE)
-							logging.debug(Fore.CYAN + Back.BLACK + "NO ACTUALIZE BIEN fuente24v A CARTELES" + Fore.WHITE)
+							estado_b = update_psql(conn, "carteles", "fuente24v", htmlFuente24v_s, "numeroSerie", dbCartelesMac_s)
+							logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - fuente24v" + Fore.WHITE)
+							logging.debug(Fore.CYAN + Back.BLACK + "fuente24v ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
 							#FUENTEPPIC
-							cursor4.execute("""UPDATE carteles SET fuenteppic = '{fuenteppic}' WHERE numeroSerie = '{numeroSerie}'""".format(fuenteppic=htmlFuentePpic_s,numeroSerie=dbCartelesMac_s))
-							if update_rows4==1:
-								logging.info(Fore.WHITE + "UPDATE OK -- " +str(update_rows4) + "-fuenteppic" + Fore.WHITE)
-								logging.debug(Fore.CYAN + Back.BLACK + "ACTUALIZE BIEN fuenteppic A LA TABLA CARTELES" + Fore.WHITE)
-							else:
-								logging.error(Fore.MAGENTA +Back.CYAN + "UPDATE ERROR -- " +str(update_rows4) + "-fuenteppic" + Fore.WHITE)
-								logging.debug(Fore.CYAN + Back.BLACK + "NO ACTUALIZE BIEN fuenteppic A CARTELES" + Fore.WHITE)
+							estado_b = update_psql(conn, "carteles", "fuentePpic", htmlFuentePpic_s, "numeroSerie", dbCartelesMac_s)
+							logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - fuenteppic" + Fore.WHITE)
+							logging.debug(Fore.CYAN + Back.BLACK + "fuenteppic ACTUALIZADO? -> "+ str(estado_b) + Fore.WHITE)
 							#FUENTE5PIC
-							cursor4.execute("""UPDATE carteles SET fuente5pic = '{fuente5pic}' WHERE numeroSerie = '{numeroSerie}'""".format(fuente5pic=htmlFuente5pic_s,numeroSerie=dbCartelesMac_s))
-							update_rows4 = cursor4.rowcount
-							if update_rows4==1:
-								logging.info(Fore.WHITE + "UPDATE OK -- " +str(update_rows4) + "-fuente5pic" + Fore.WHITE)
-								logging.debug(Fore.CYAN + Back.BLACK + "ACTUALIZE BIEN fuente5pic A LA TABLA CARTELES" + Fore.WHITE)
-							else:
-								logging.error(Fore.MAGENTA +Back.CYAN + "UPDATE ERROR -- " +str(update_rows4) + "-fuente5pic" + Fore.WHITE)
-								logging.debug(Fore.CYAN + Back.BLACK + "NO ACTUALIZE BIEN fuente5pic A CARTELES" + Fore.WHITE)
+							estado_b = update_psql(conn, "carteles", "fuente5pic", htmlFuente5pic_s, "numeroSerie", dbCartelesMac_s)
+							logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - fuente5pic" + Fore.WHITE)
+							logging.debug(Fore.CYAN + Back.BLACK + "fuente5pic ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
 							#MENSAJE
-							cursor4.execute("""UPDATE carteles SET mensaje = '{msj}' WHERE numeroSerie = '{numeroSerie}'""".format(msj=htmlMensaje_s,numeroSerie=dbCartelesMac_s))
-							update_rows4 = cursor4.rowcount
-							if update_rows4==1:
-								logging.info(Fore.WHITE + "UPDATE OK -- " +str(update_rows4) + "-mensaje" + Fore.WHITE)
-								logging.debug(Fore.CYAN + Back.BLACK + "ACTUALIZE BIEN mensaje A LA TABLA CARTELES" + Fore.WHITE)
-							else:
-								logging.error(Fore.MAGENTA +Back.CYAN + "UPDATE ERROR -- " +str(update_rows4) + "-mensaje" + Fore.WHITE)
-								logging.debug(Fore.CYAN + Back.BLACK + "NO ACTUALIZE BIEN mensaje A CARTELES" + Fore.WHITE)
-
+							estado_b = update_psql(conn, "carteles", "mensaje", htmlMensaje_s, "numeroSerie", dbCartelesMac_s)
+							logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - mensaje" + Fore.WHITE)
+							logging.debug(Fore.CYAN + Back.BLACK + "mensaje ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
 							conn.commit()
-		#else:
-		#	print(Fore.RED + "PING FALSE...")
-			#SI EL PING ES FALSO, YA LO INDIQUE ARRIBA Y ACA NO DEBERIA HACER NADA
-		logging.info(Fore.WHITE + "TEMP:" + htmlTemp_s + Fore.WHITE)
-		logging.info(Fore.WHITE + "FUENTE 5v:" + htmlFuente5v_s + Fore.WHITE)
-		logging.info(Fore.WHITE + "FUENTE 24v:" + htmlFuente24v_s + Fore.WHITE)
-		logging.info(Fore.WHITE + "FUENTE PPIC:" + htmlFuentePpic_s + Fore.WHITE)				
-		logging.info(Fore.WHITE + "FUENTE 5PIC:" + htmlFuente5pic_s + Fore.WHITE)
-		logging.info(Fore.WHITE + "CORRIENTE:" + htmlCorriente_s + Fore.WHITE)
-		logging.info(Fore.WHITE + "MAC:" + htmlMac_s + Fore.WHITE)
-		logging.info(Fore.WHITE + "MENSAJE:" + htmlMensaje_s + Fore.WHITE)
-		logging.debug(Fore.CYAN + "******************************************" + Fore.WHITE)
-conn.commit()
-cursor.close()
-cursor2.close()
-cursor3.close()
-conn.close()
+					if dbCartelesMac_s==False:
+						#SI NO ENCONTRE LA MAC, LA DEBO AGREGAR A LA TABLA carteles Y GENERAR ALERTA
+						logging.debug(Fore.CYAN + Back.BLACK + "NUEVA MAC EN LINEA -> AGREGO A LA TABLA carteles " + htmlMac_s + Back.BLACK + Fore.WHITE)
+						insert_psql(conn, "carteles", "'{serie}','{tiempo}','{pila}','{temp}','{corri}','{fuente5}','{fuente24}','{fuenteP}','fuente5p','msj'".format(serie=htmlMac_s, tiempo=dateTime_s, pila=htmlPila_s, temp=htmlTemp_s, corri=htmlCorriente_s, fuente5=htmlFuente5v_s, fuente24=htmlFuente24v_s, fuentep=htmlFuentePpic_s, fuente5p=htmlFuente5pic, msj=htmlMensaje_s))
+
+
+	conn.commit()
+	cursor.close()
+	cursor2.close()
+	cursor3.close()
+	conn.close()
 logging.info("" + Fore.WHITE)
 logging.info(Fore.RED + Back.BLACK + '**********************************************************************************************' + Fore.WHITE)
 #if __name__=="__main__":
