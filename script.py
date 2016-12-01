@@ -17,13 +17,13 @@ init()
 # DEBUG: Detailed information, typically of interest only when diagnosing problems.
 	#logging.debug('DEBUG') --> YELLOW
 # INFO: Confirmation that things are working as expected.
-	#logging.info('INFO') --> WHITE
+	#logging.info(Fore.WHITE + Back.BLACK + 'INFO')
 # WARNING: An indication that something unexpected happened, or indicative of some problem in the near future (e.g. ‘disk space low’). The software is still working as expected.
-	#logging.warning('WARNING')
+	#logging.warning(Fore.GREEN + Back.RED + 'WARNING')
 # ERROR: Due to a more serious problem, the software has not been able to perform some function.
-	#logging.error('ERROR')
+	#logging.error(Fore.MAGENTA + Back.CYAN + 'ERROR')
 # CRITICAL: A serious error, indicating that the program itself may be unable to continue running.
-	#logging.critical('CRITICAL')
+	#logging.critical(Fore.BLACK + Back.MAGENTA + 'CRITICAL')
 
 #def main():
 from colorama import Fore, Back, Style
@@ -34,15 +34,14 @@ init_logger()
 dateTime_d = datetime.now()
 dateTime_s = dateTime_d.strftime('%y-%m-%d_%H:%M:%S')
 logging.info(Fore.RED + Back.BLACK + '**********************************************************************************************' + Fore.WHITE)
-logging.info(Fore.WHITE + 'INICIANDO SCRIPT... 		ver. 2016.11.25' + Fore.WHITE)
+logging.info(Fore.WHITE + 'INICIANDO SCRIPT... 		ver. 2016.11.30' + Fore.WHITE)
 
 #
-#	SE CORRIGIO QUE TRATE DE CERRAR conn.close() SI NO SE PUEDO COENCTAR
-#	SE CREO UNA FUNCION PARA ESCRIBIR EN LA BASE DE DATOS. boolean update_psql(connector, nombreTabla_SET, dato_SET, nombreTabla_WHERE, dato_WHERE)
-#	SE BORRO EL MENSAJE DE INFO CON NULL DEL FINAL DE CADA VARIABLE -- NO TENIA NINGUN SENTIDO MOSTRAR ESO AHI
-#	SE AGREGO FUNCION PARA BUSCAR LOS STRING EN EL HTML DE LA PAGINA DEL MICRO, Y EVITAR REPETIR LO MISMO MUCHAS VECES
-#	SE CREO UN SOLO .py CON TODAS LAS FUCNIONES AHI DENTRO
-#	SE MODIFICO LA FORMA DE MOSTRAR LOS UPDATE 1 - 0. SOBRE LA ACTUALIZACION DE LA TABLA, PARA SIMPLIFICAR EL CODIGO.
+#	SE OPTIMIZO EL CODIGO, AHORA NO SE REPITEN LINEAS QUE HACEN LO MISMO, EN LA PARTE DE ESCRIBIR LA TABLAS. AHORA ESTA ESCRITO UNA SOLA VEZ
+#	FUNCIONA CORECTAMENTE LA OPCION DE CARGAR UN NUEVO CARTEL, Y QUE LA MAC NO ESTE EN LA TABLA carteles
+#	SE CORRIGIO EL MENSAJE warning Y error, EL COLOR DE FONDO.
+#	SE AGREGARON MENSAJES DE info PARA CUANDO SE AGREGA UN NUEVO CARTEL.
+#	SE MEJORO LOS COLORES Y FONDO DE LAS ALERTAS.
 #
 
 #define String conection
@@ -54,7 +53,7 @@ logging.debug(Fore.CYAN + 'Connecting to database -> {conector}'.format(conector
 try:
 	conn = psycopg2.connect(connection_s)
 except psycopg2.OperationalError as e:
-	logging.critical(Fore.RED + "ERROR DE CONEXION A LA BASE DE DATOS... " + str(e) + Fore.WHITE)
+	logging.critical(Back.MAGENTA + Fore.BLACK + "ERROR DE CONEXION A LA BASE DE DATOS... " + str(e) + Back.BLACK + Fore.WHITE)
 else:
 	conn.set_isolation_level(0)
 	cursor = conn.cursor()
@@ -88,7 +87,7 @@ else:
 			logging.debug(Fore.CYAN + Back.BLACK + "EL PING DIO OK, ALGO ME RESPONDIO" + Fore.WHITE)
 			ping_b = True
 		else:
-			logging.warning(Fore.MAGENTA + dbEstacionesIp_s + " DOWN" + Fore.WHITE)
+			logging.warning(Back.RED + Fore.GREEN + dbEstacionesIp_s + " DOWN" + Back.BLACK + Fore.WHITE)
 			logging.debug(Fore.CYAN + Back.BLACK + "EL PING DIO MAL, NO ME RESPONDIO" + Fore.WHITE)
 			ping_b = False
 		#actualizo el ping en la tabla estaciones
@@ -185,107 +184,91 @@ else:
 				#AHORA QUE TENGO LA MAC, PRIMERO DEBO COMPARARLA CON LA QUE ENCONTRE EN LA TABLA
 				if htmlMac_s==dbEstacionesMac_s:
 					#LA MAC DE LA TABLA ESTACION ES IGUAL A LA DE LA PAGINA => EL CARTEL QUE ESTA EN LA ESTACION ES EL QUE DICE LA BASE DE DATOS!
-					logging.debug(Fore.CYAN + "htmlMac==dbEstacionesMac => LA TABLA ESTACIONES ESTA ACTUALIZADA!" + Fore.WHITE)
-					#DATETIME
-					estado_b = update_psql(conn, "carteles", "dateTime", dateTime_s, "numeroSerie", dbEstacionesMac_s)
-					logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - dateTime" + Fore.WHITE)
-					logging.debug(Fore.CYAN + Back.BLACK + "dateTime ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
-					#PILA
-					estado_b = update_psql(conn, "carteles", "pila", htmlPila_s, "numeroSerie", dbEstacionesMac_s)
-					logging.info(Fore.WHITE + "UPDATE OK (1)" + "-pila" + Fore.WHITE)
-					logging.debug(Fore.CYAN + Back.BLACK + "ACTUALIZE BIEN pila A LA TABLA CARTELES" + Fore.WHITE)
-					#TEMPERATURA
-					estado_b = update_psql(conn, "carteles", "temp", htmlTemp_s, "numeroSerie", dbEstacionesMac_s)
-					logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - temperatura" + Fore.WHITE)
-					logging.debug(Fore.CYAN + Back.BLACK + "temperatura ACTUALIZADA? -> " + str(estado_b) + Fore.WHITE)
-					#CORRIENTE
-					estado_b = update_psql(conn, "carteles", "corriente", htmlCorriente_s, "numeroSerie", dbEstacionesMac_s)
-					logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - corriente" + Fore.WHITE)
-					logging.debug(Fore.CYAN + Back.BLACK + "corriente ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
-					#FUENTE5V
-					estado_b = update_psql(conn, "carteles", "fuente5v", htmlFuente5v_s, "numeroSerie", dbEstacionesMac_s)
-					logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - fuente5v" + Fore.WHITE)
-					logging.debug(Fore.CYAN + Back.BLACK + "fuente5v ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
-					#fuente24V
-					estado_b = update_psql(conn, "carteles", "fuente24v", htmlFuente24v_s, "numeroSerie", dbEstacionesMac_s)
-					logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + "-fuente24v" + Fore.WHITE)
-					logging.debug(Fore.CYAN + Back.BLACK + "fuente24v ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
-					#FUENTEPPIC
-					estado_b = update_psql(conn, "carteles", "fuentePpic", htmlFuentePpic_s, "numeroSerie", dbEstacionesMac_s)
-					logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + "-fuenteppic" + Fore.WHITE)
-					logging.debug(Fore.CYAN + Back.BLACK + "fuenteppic ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
-					#FUENTE5PIC
-					estado_b = update_psql(conn, "carteles", "fuente5pic", htmlFuente5pic_s, "numeroSerie", dbEstacionesMac_s)
-					logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - fuente5pic" + Fore.WHITE)
-					logging.debug(Fore.CYAN + Back.BLACK + "fuente5pic ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
-					#MENSAJE
-					estado_b = update_psql(conn, "carteles", "mensaje", htmlMensaje_s, "numeroSerie", dbEstacionesMac_s)
-					logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - mensaje" + Fore.WHITE)
-					logging.debug(Fore.CYAN + Back.BLACK + "mensaje ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
+					logging.debug(Fore.CYAN + "htmlMac==dbEstacionesMac => LA TABLA estaciones ESTA ACTUALIZADA!" + Fore.WHITE)
+					logging.info(Fore.WHITE + "htmlMac==dbEstacionesMac => LA TABLA estaciones ESTA ACTUALIZADA!" + Fore.WHITE)
+					#INFO
+					#OJO!!!!! SI MAGIACAMENTE EL CARTEL SE BORRO, DEBERIA VERIFICARLO!
+					#
+					#
+					macUpdate_s = htmlMac_s;
 				else:
 					#LA MAC DE LA TABLA ESTACIONES ES DISTINTA A LA DE LA PAGINA
-					#BUSCAR EN LA TABLA CARTELES LA htmlMac
-					logging.debug(Fore.CYAN + "htmlMac!=dbEstacionesMac => LA TABLA ESTACIONES NO ESTA ACTUALIZADA..." + Fore.WHITE)
+					#BUSCAR EN LA TABLA CARTELES LA htmlMac, EN CASO DE QUE NO EXISTA, AGREGO LA NUEVA MAC
+					logging.debug(Fore.CYAN + "htmlMac!=dbEstacionesMac => LA TABLA estaciones NO ESTA ACTUALIZADA..." + Fore.WHITE)
+					logging.info(Fore.WHITE + "htmlMac!=dbEstacionesMac => LA TABLA estaciones NO ESTA ACTUALIZADA..." + Fore.WHITE)
 					#cursor4 = conn.cursor()
 					cursor4.execute("""SELECT * FROM v_carteles;""")
 					rows4 = cursor4.fetchall();
 					dbCartelesMac_s = 'null'
 					dbCartelesMac_b = False		#VARIABLE PARA SABER SI LA MAC YA ESTA EN LA LISTA DE carteles
-					for row4 in rows4:
+					for row4 in rows4:	#BUSCO LA MAC EN LA TABLA carteles
 						dbCartelesMac_s = str(row4[0])
 						#logging.debug(Fore.CYAN + "ESTO ENCONTRE dbEstacionesMac => " + dbCartelesMac_s + Fore.WHITE)
 						if dbCartelesMac_s==htmlMac_s:
 							dbCartelesMac_b = True
-							logging.info(Fore.WHITE + "MAC ENCONTRADA: " + dbCartelesMac_s + Fore.WHITE)
+							#logging.info(Fore.WHITE + "MAC ENCONTRADA: " + dbCartelesMac_s + Fore.WHITE)
+							logging.debug(Fore.CYAN + Back.BLACK + "ENCONTRE LA mac: " + str(dbCartelesMac_s) + Fore.WHITE)
+							macUpdate_s = dbCartelesMac_s;
 							#ENCONTRE LA MAC DEL HTML EN LA TABLA DE CARTELES
 							#AHORA TENGO QUE ACTUALIZAR LA TABLA DE ESTACIONES CON LA NUEVA MAC!
-							logging.debug(Fore.CYAN + "ENCONTRE LA MAC EN LA TABLA CARTELES!" + dbCartelesMac_s + Fore.WHITE)
-							estado_b = update_psql(conn, "estaciones", "numeroSerie", dbCartelesMac_s, "numeroCartel", dbEstacionesNumeroCartel_s)
-							logging.info(Fore.WHITE + "UPDATE " +str(estado_b) + " - numeroSerie" + Fore.WHITE)
-							logging.debug(Fore.CYAN + Back.BLACK + "Mac ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
-							#TENGO QUE ACTUALIZAR TODOS LOS PARAMETROS DEL CARTEL AHORA EN LA TABLA CARTELES
-							#DATETIME
-							estado_b = update_psql(conn, "carteles", "dateTime", dateTime_s, "numeroSerie", dbCartelesMac_s)
-							logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - dateTime" + Fore.WHITE)
-							logging.debug(Fore.CYAN + Back.BLACK + "dateTime ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
-							#PILA
-							estado_b = update_psql(conn, "carteles", "pila", htmlPila_s, "numeroSerie", dbCartelesMac_s)
-							logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - pila" + Fore.WHITE)
-							logging.debug(Fore.CYAN + Back.BLACK + "pila ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
-							#TEMPERATURA
-							estado_b = update_psql(conn, "carteles", "temp", htmlTemp_s, "numeroSerie", dbCartelesMac_s)
-							logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - temperatura" + Fore.WHITE)
-							logging.debug(Fore.CYAN + Back.BLACK + "temperatura ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
-							#CORRIENTE
-							estado_b = update_psql(conn, "carteles", "corriente", htmlCorriente_s, "numeroSerie", dbCartelesMac_s)
-							logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - corriente" + Fore.WHITE)
-							logging.debug(Fore.CYAN + Back.BLACK + "corriente ACTUALIZADA? -> " + str(estado_b) + Fore.WHITE)
-							#FUENTE5V
-							estado_b = update_psql(conn, "carteles", "fuente5v", htmlFuente5v_s, "numeroSerie", dbCartelesMac_s)
-							logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - fuente5v" + Fore.WHITE)
-							logging.debug(Fore.CYAN + Back.BLACK + "fuente5v ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
-							#fuente24V
-							estado_b = update_psql(conn, "carteles", "fuente24v", htmlFuente24v_s, "numeroSerie", dbCartelesMac_s)
-							logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - fuente24v" + Fore.WHITE)
-							logging.debug(Fore.CYAN + Back.BLACK + "fuente24v ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
-							#FUENTEPPIC
-							estado_b = update_psql(conn, "carteles", "fuentePpic", htmlFuentePpic_s, "numeroSerie", dbCartelesMac_s)
-							logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - fuenteppic" + Fore.WHITE)
-							logging.debug(Fore.CYAN + Back.BLACK + "fuenteppic ACTUALIZADO? -> "+ str(estado_b) + Fore.WHITE)
-							#FUENTE5PIC
-							estado_b = update_psql(conn, "carteles", "fuente5pic", htmlFuente5pic_s, "numeroSerie", dbCartelesMac_s)
-							logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - fuente5pic" + Fore.WHITE)
-							logging.debug(Fore.CYAN + Back.BLACK + "fuente5pic ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
-							#MENSAJE
-							estado_b = update_psql(conn, "carteles", "mensaje", htmlMensaje_s, "numeroSerie", dbCartelesMac_s)
-							logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - mensaje" + Fore.WHITE)
-							logging.debug(Fore.CYAN + Back.BLACK + "mensaje ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
-							conn.commit()
-					if dbCartelesMac_s==False:
-						#SI NO ENCONTRE LA MAC, LA DEBO AGREGAR A LA TABLA carteles Y GENERAR ALERTA
-						logging.debug(Fore.CYAN + Back.BLACK + "NUEVA MAC EN LINEA -> AGREGO A LA TABLA carteles " + htmlMac_s + Back.BLACK + Fore.WHITE)
-						insert_psql(conn, "carteles", "'{serie}','{tiempo}','{pila}','{temp}','{corri}','{fuente5}','{fuente24}','{fuenteP}','fuente5p','msj'".format(serie=htmlMac_s, tiempo=dateTime_s, pila=htmlPila_s, temp=htmlTemp_s, corri=htmlCorriente_s, fuente5=htmlFuente5v_s, fuente24=htmlFuente24v_s, fuentep=htmlFuentePpic_s, fuente5p=htmlFuente5pic, msj=htmlMensaje_s))
+							estado_b = update_psql(conn, "estaciones", "numeroSerie", macUpdate_s, "numeroCartel", dbEstacionesNumeroCartel_s)
+							logging.debug(Fore.CYAN + Back.BLACK + "mac ACTUALIZADO EN TABLA estaciones? -> UPDATE: " + str(estado_b) + "- numeroSerie" + Fore.WHITE)
+							logging.info(Fore.WHITE + "mac ACTUALIZADA EN TABLA estaciones? --> UPDATE: " +str(estado_b) + " - numeroSerie" + Fore.WHITE)
 
+					if dbCartelesMac_b == False:
+						#logging.info(Fore.WHITE + "MAC ENCONTRADA: " + dbCartelesMac_s + Fore.WHITE)
+						logging.debug(Fore.CYAN + Back.BLACK + "NO ENCONTRE LA mac... LA TENGO QUE AGREGAR A TABLA carteles! " + Fore.WHITE)
+						macUpdate_s = htmlMac_s;
+						#NO ENCONTRE LA MAC... DEBO AGREGARLA						
+						estado_b=insert_psql(conn, "carteles", "'{serie}','{tiempo}','{pila}','{temp}','{corri}','{fuente5}','{fuente24}','{fuenteP}','{fuente5p}','msj'".format(serie=htmlMac_s, tiempo=dateTime_s, pila=htmlPila_s, temp=htmlTemp_s, corri=htmlCorriente_s, fuente5=htmlFuente5v_s, fuente24=htmlFuente24v_s, fuenteP=htmlFuentePpic_s, fuente5p=htmlFuente5pic_s, msj=htmlMensaje_s))
+						logging.debug(Fore.CYAN + Back.BLACK + "mac INSERTADA? -> " + str(estado_b) + Fore.WHITE)
+						if estado_b == True:
+							estado_b = update_psql(conn, "estaciones", "numeroSerie", htmlMac_s, "numeroCartel", dbEstacionesNumeroCartel_s)
+							logging.debug(Fore.CYAN + Back.BLACK + "NUEVA mac ACTUALIZADO EN TABLA estaciones? -> UPDATE: " + str(estado_b) + "- numeroSerie" + Fore.WHITE)
+							logging.info(Fore.WHITE + Back.BLACK + "NUEVA mac ACTUALIZADO EN TABLA estaciones? -> UPDATE: " + str(estado_b) + "- numeroSerie" + Fore.WHITE)
+
+				#TENGO QUE ACTUALIZAR TODOS LOS PARAMETROS DEL CARTEL AHORA EN LA TABLA carteles -- VARIABLE macUpdate
+				logging.info(Fore.WHITE + "ACTUALIZANDO TABLA estaciones... " + Fore.WHITE)
+				logging.debug(Fore.CYAN + "AHORA VOY A ACTUALIZAR LA TABLA estaciones CON TODOS LOS DATOS..." + Fore.WHITE)
+				#DATTIME				
+				estado_b = update_psql(conn, "carteles", "dateTime", dateTime_s, "numeroSerie", macUpdate_s)
+				logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - dateTime" + Fore.WHITE)
+				logging.debug(Fore.CYAN + Back.BLACK + "dateTime ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
+				#PILA
+				estado_b = update_psql(conn, "carteles", "pila", htmlPila_s, "numeroSerie", macUpdate_s)
+				logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - pila" + Fore.WHITE)
+				logging.debug(Fore.CYAN + Back.BLACK + "pila ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
+				#TEMPERATURA
+				estado_b = update_psql(conn, "carteles", "temp", htmlTemp_s, "numeroSerie", macUpdate_s)
+				logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - temperatura" + Fore.WHITE)
+				logging.debug(Fore.CYAN + Back.BLACK + "temperatura ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
+				#CORRIENTE
+				estado_b = update_psql(conn, "carteles", "corriente", htmlCorriente_s, "numeroSerie", macUpdate_s)
+				logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - corriente" + Fore.WHITE)
+				logging.debug(Fore.CYAN + Back.BLACK + "corriente ACTUALIZADA? -> " + str(estado_b) + Fore.WHITE)
+				#FUENTE5V
+				estado_b = update_psql(conn, "carteles", "fuente5v", htmlFuente5v_s, "numeroSerie", macUpdate_s)
+				logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - fuente5v" + Fore.WHITE)
+				logging.debug(Fore.CYAN + Back.BLACK + "fuente5v ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
+				#fuente24V
+				estado_b = update_psql(conn, "carteles", "fuente24v", htmlFuente24v_s, "numeroSerie", macUpdate_s)
+				logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - fuente24v" + Fore.WHITE)
+				logging.debug(Fore.CYAN + Back.BLACK + "fuente24v ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
+				#FUENTEPPIC
+				estado_b = update_psql(conn, "carteles", "fuentePpic", htmlFuentePpic_s, "numeroSerie", macUpdate_s)
+				logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - fuenteppic" + Fore.WHITE)
+				logging.debug(Fore.CYAN + Back.BLACK + "fuenteppic ACTUALIZADO? -> "+ str(estado_b) + Fore.WHITE)
+				#FUENTE5PIC
+				estado_b = update_psql(conn, "carteles", "fuente5pic", htmlFuente5pic_s, "numeroSerie", macUpdate_s)
+				logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - fuente5pic" + Fore.WHITE)
+				logging.debug(Fore.CYAN + Back.BLACK + "fuente5pic ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
+				#MENSAJE
+				estado_b = update_psql(conn, "carteles", "mensaje", htmlMensaje_s, "numeroSerie", macUpdate_s)
+				logging.info(Fore.WHITE + "UPDATE " + str(estado_b) + " - mensaje" + Fore.WHITE)
+				logging.debug(Fore.CYAN + Back.BLACK + "mensaje ACTUALIZADO? -> " + str(estado_b) + Fore.WHITE)
+				conn.commit()
+
+	#estado_binsert_psql(conn, "carteles", "'{serie}','{tiempo}','{pila}','{temp}','{corri}','{fuente5}','{fuente24}','{fuenteP}','fuente5p','msj'".format(serie=htmlMac_s, tiempo=dateTime_s, pila=htmlPila_s, temp=htmlTemp_s, corri=htmlCorriente_s, fuente5=htmlFuente5v_s, fuente24=htmlFuente24v_s, fuentep=htmlFuentePpic_s, fuente5p=htmlFuente5pic, msj=htmlMensaje_s))
 
 	conn.commit()
 	cursor.close()
