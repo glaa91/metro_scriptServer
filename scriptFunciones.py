@@ -16,15 +16,16 @@ def update_psql(conn, db, var_set1, var_set2, var_where1, var_where2):
 	return estado_b
 
 #FUNCION PARA AGREGAR DATOS A UNA TABLA DE LA BASE DE DATOS
-def inert_psql(conn, db, datos_s):
+def insert_psql(conn, db, datos_s):
 	estado_b = False
 	cursor = conn.cursor()
 	cursor.execute("""INSERT INTO {dataBase} VALUES({d1});""".format(dataBase=db, d1=datos_s))
+	update_rows = cursor.rowcount
 	if update_rows==1:
 		estado_b = True
 	else:
 		estado_b = False
-	conn.commmit()
+#	conn.commmit()
 	return estado_b
 
 #FUNCION PARA SACAR LOS STRING DEL LA PAGINA DEL MICRO (TEMP, MENSAJE, MAC, ECT)
@@ -49,14 +50,14 @@ def init_logger():
 
 	#create error file handler and set level to error
 #	handler = logging.FileHandler(filename="scriptError.log", encoding=None, delay="true")
-	handler = logging.FileHandler("scriptError.log", 'w+')
+	handler = logging.FileHandler("scriptError.log", 'a+')
 	handler.setLevel(logging.ERROR)
 	formatter = logging.Formatter("%(asctime)s-%(levelname)s - %(message)s", datefmt='%Y/%m/%d %H:%M:%S')
 	handler.setFormatter(formatter)
 	logger.addHandler(handler)
 
 	# create debug file handler and set level to debug
-	handler = logging.FileHandler(filename="scriptInfo.log", mode='w+')
+	handler = logging.FileHandler(filename="scriptInfo.log", mode='a+')
 	handler.setLevel(logging.DEBUG)
 	formatter = logging.Formatter("%(asctime)s-%(levelname)s - %(message)s", datefmt='%Y/%m/%d %H:%M:%S')
 	handler.setFormatter(formatter)
